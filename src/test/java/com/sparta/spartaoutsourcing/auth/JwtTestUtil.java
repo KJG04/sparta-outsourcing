@@ -1,15 +1,11 @@
-package com.sparta.spartaoutsourcing.auth.jwt;
+package com.sparta.spartaoutsourcing.auth;
 
 import com.sparta.spartaoutsourcing.user.enums.UserRole;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
 import jakarta.servlet.ServletException;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.UnsupportedEncodingException;
@@ -19,24 +15,17 @@ import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
 
-@Component
-public class JwtUtil {
+public class JwtTestUtil {
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String AUTHORIZATION_KEY = "auth";
     public static final String BEARER_PERFIX = "Bearer ";
     private final long TOKEN_TIME = 60 * 60 * 1000L; // 60분
 
-    @Value("${jwt.secret.key}")
-    private String secretkey;
-    private Key key;
+//    @Value("${jwt.secret.key")
+    private String secretkey = "7Iqk7YyM66W07YOA7L2U65Sp7YG065+9U3ByaW5n6rCV7J2Y7Yqc7YSw7LWc7JuQ67mI7J6F64uI64ukLg==";
+    private Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretkey));;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
     public static final Logger logger = LoggerFactory.getLogger("JWT 관련 로그");
-
-    @PostConstruct
-    public void init() {
-        byte[] bytes = Base64.getDecoder().decode(secretkey);
-        key = Keys.hmacShaKeyFor(bytes);
-    }
 
     /**
      * JWT 생성
@@ -50,15 +39,15 @@ public class JwtUtil {
         Date date = new Date();
 
         String token = BEARER_PERFIX +
-                        Jwts.builder()
-                                .setSubject(email)
-                                .claim("username", username)
-                                .claim("userId", userId)
-                                .claim(AUTHORIZATION_KEY, role)
-                                .setExpiration(new Date(date.getTime() + TOKEN_TIME))
-                                .setIssuedAt(date)
-                                .signWith(key, signatureAlgorithm)
-                                .compact();
+                Jwts.builder()
+                        .setSubject(email)
+                        .claim("username", username)
+                        .claim("userId", userId)
+                        .claim(AUTHORIZATION_KEY, role)
+                        .setExpiration(new Date(date.getTime() + TOKEN_TIME))
+                        .setIssuedAt(date)
+                        .signWith(key, signatureAlgorithm)
+                        .compact();
 
         return URLEncoder.encode(token, "UTF-8").replaceAll("\\+", "%20");
     }
@@ -75,7 +64,7 @@ public class JwtUtil {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
 
             return true;
-        } catch ( SecurityException | MalformedJwtException e) {
+        } catch (SecurityException | MalformedJwtException e) {
             logger.error("Invalid JWT signature, 유효하지 않은 JWT 서명입니다.");
             throw new ServletException("Invalid JWT signature, 유효하지 않은 JWT 서명입니다.");
         } catch (ExpiredJwtException e) {
@@ -122,8 +111,7 @@ public class JwtUtil {
      */
     public String substringToken(String bearerToken) throws ServletException {
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PERFIX)) {
-            String[] splitToken = bearerToken.split(" ");
-            return splitToken[splitToken.length - 1].trim();
+            return bearerToken.substring(7);
         }
 
         logger.error("Not Found Token");

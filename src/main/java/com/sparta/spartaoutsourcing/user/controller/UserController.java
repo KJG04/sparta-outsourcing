@@ -1,7 +1,6 @@
 package com.sparta.spartaoutsourcing.user.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.spartaoutsourcing.auth.jwt.JwtUtil;
 import com.sparta.spartaoutsourcing.auth.security.UserDetailsImpl;
 import com.sparta.spartaoutsourcing.auth.token.TokenBlacklistService;
@@ -12,6 +11,7 @@ import com.sparta.spartaoutsourcing.user.exception.UserException;
 import com.sparta.spartaoutsourcing.user.service.KakaoService;
 import com.sparta.spartaoutsourcing.user.service.UserService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,11 +21,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.view.RedirectView;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.AccessDeniedException;
-import java.util.Map;
 
 @Slf4j(topic = "UserController")
 @Validated
@@ -81,10 +80,10 @@ public class UserController {
     }
 
     @GetMapping("/users/login/kakao")
-    public RedirectView kakaoLogin() {
+    public void kakaoLogin(HttpServletResponse response) throws IOException {
         log.info("::: 카카오 로그인 :::");
-
-        return this.kakaoService.kakaoLogin();
+        response.sendRedirect(this.kakaoService.kakaoLogin());
+        response.setStatus(HttpStatus.FOUND.value());
     }
 
     /**
@@ -95,18 +94,11 @@ public class UserController {
      * @throws UnsupportedEncodingException : createToken() 메서드 실행 중 발생 가능
      */
     @GetMapping("/users/login/kakao/callback")
-    public ResponseEntity<String> kakaoLoginCallback(@RequestParam String code) throws JsonProcessingException, UnsupportedEncodingException {
+    public ResponseEntity<UserResponseDto> kakaoLoginCallback(@RequestParam String code) throws JsonProcessingException, UnsupportedEncodingException {
         log.info("::: 카카오 로그인 Callback :::");
-        UserResponseDto responseDto = this.kakaoService.kakaoLogin(code);
+        UserResponseDto responseDto = this.kakaoService.kakaoLoginCallback(code);
         String bearerToken = this.userService.createToken(responseDto);
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        String response = objectMapper.writeValueAsString(Map.of(
-                "UserInfo", responseDto,
-                "Authorization", bearerToken
-        ));
-
-
-        return ResponseEntity.status(HttpStatus.OK).header(JwtUtil.AUTHORIZATION_HEADER, bearerToken).body(response);
+        return ResponseEntity.status(HttpStatus.OK).header(JwtUtil.AUTHORIZATION_HEADER, bearerToken).body(responseDto);
     }
 }
